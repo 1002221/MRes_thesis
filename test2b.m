@@ -6,7 +6,7 @@ function a=test2(r,J,m,T,N,randoms_init)
 %N:= subscripts of the Fourier coefficients go from -N to N
 %epsilon:= parameter with which we smooth the white noise
 %randoms:= random variables supplied to the function: should be at least
-%(N+1) times 1 in size.
+%(N+1) times 1 in size
 
 x=linspace(0,2*pi,2^5);
 u = zeros(2^m*T+1,2*N+1,J); %this will contain the Fourier coefficients. 
