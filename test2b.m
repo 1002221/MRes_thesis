@@ -1,4 +1,4 @@
-function a=test2(r,J,m,T,N,randoms_init)
+function a=test2b(r,J,m,T,N,randoms_init)
 %USAGE
 %J:= number of iterations
 %m:= we subdivide the unit interval into 2^m equally spaced points
@@ -19,14 +19,14 @@ eps = 1; %parameter by which we multiply u^3. Allows us to get rid of the
 source = zeros(2*N+1,2^m+1);
 for n=N+2:2*N+1
     for i=1:2^m*T+1
-        x1=timewhitenoise1D(r,i-1,randoms_init);
-        x2=timewhitenoise1D(r,i-1,randoms_init);
+        x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init);
+        x2=timewhitenoise1D(r,(i-1)/(2^m),randoms_init);
         source(n,i)=1/(2*pi)*(x1-1i*x2); 
         source(2*(N+1)-n,i)=1/(2*pi)*(x1+1i*x2);
     end
 end
 for i=1:2^m*T+1
-        x1=timewhitenoise1D(r,i-1,randoms_init);
+        x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init);
         source(1,i)=1/(2*pi)*(x1); 
 end
 %compute the truncated upper and lower bounds for the 
@@ -64,7 +64,8 @@ for j=2:J
         soln(j,:) = soln(j,:)+ u(2^m*T+1,n,j)*exp(1i*(n-N-1).*x);
     end
 end
-surf(x,linspace(2,J,J-1),real(soln(2:J,:)));
+surf(x,linspace(1,J,J),real(soln(:,:)));
+real(soln(J,:))
 xlabel('space')
 ylabel('iteration')
 zlabel('solution')
