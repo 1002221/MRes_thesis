@@ -1,4 +1,4 @@
-function answer=test3(epsilon,J,m,T,N,x,y,randoms)
+function answer=test3(r,J,m,T,N,x,y,randoms_init)
 %J=1; %number of iterations
 %m=1; %we subdivide the unit interval into 2^m equally spaced points
 %T = 1; %units of time
@@ -9,52 +9,22 @@ u = zeros(2^m*T+1,2*N+1,2*N+1,J);
 %randoms= randn(2*N+1,1); %standard normal random variables, one for each n
 eps = 1; %parameter by which we multiply u^3. Allows us to get rid of the 
 %non-linear term if we wish
-source = zeros(2*N+1,2*N+1,1); %source term (i.e. the 'f')
+source = zeros(2*N+1,2*N+1,2^m+1); %source term (i.e. the 'f')
 % source(N+1,N+1)=1;
+
 for n=N+2:2*N+1
     for l=N+2:2*N+1
-        source(n,l)=rhohat2D(epsilon*(n-N-1),epsilon*(l-N-1))*.25*...
-            (randoms(n-(N+1)+1,1,1)*randoms(l-(N+1)+1,1,2)...
-            -1i*randoms(n-(N+1)+1,1,1)*randoms(l-(N+1)+1,2,2)...
-            -1i*randoms(n-(N+1)+1,2,1)*randoms(l-(N+1)+1,1,2)...
-            -randoms(n-(N+1)+1,2,1)*randoms(l-(N+1)+1,2,2));
-        %compute the 
-        %Fourier transform, but take re-indexing into account
+         for i=1:2^m*T+1
+            xi1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,1));
+            xi2=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,2));
+            xi3=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,2));
+            xi4=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,2));
+            source(n,:)=1/(2*pi)*(xi1pos-1i*xi2pos); 
+            source(2*(N+1)-n,:)=1/(2*pi)*(xi1neg+1i*xi2neg);
+         end
     end
 end
-for n=1:N
-    for l=1:N
-        source(n,l)=rhohat2D(epsilon*(n-N-1),epsilon*(l-N-1))*.25*...
-            (randoms(N+1-n+1,1,1)*randoms(N+1-l+1,1,2)...
-            +1i*randoms(N+1-n+1,1,1)*randoms(N+1-l+1,2,2)...
-            +1i*randoms(N+1-n+1,2,1)*randoms(N+1-l+1,1,2)...
-            -randoms(N+1-n+1,2,1)*randoms(N+1-l+1,2,2));
-        %compute the 
-        %Fourier transform, but take re-indexing into account
-    end
-end
-for n=N+2:2*N+1
-    for l=1:N
-        source(n,l)=rhohat2D(epsilon*(n-N-1),epsilon*(l-N-1))*.25*...
-            (randoms(n-(N+1)+1,1,1)*randoms(N+1-l+1,1,2)...
-            +1i*randoms(n-(N+1)+1,1,1)*randoms(N+1-l+1,2,2)...
-            -1i*randoms(n-(N+1)+1,2,1)*randoms(N+1-l+1,1,2)...
-            +randoms(n-(N+1)+1,2,1)*randoms(N+1-l+1,2,2));
-        %compute the 
-        %Fourier transform, but take re-indexing into account
-    end
-end
-for n=1:N
-    for l=N+2:2*N+1
-        source(n,l)=rhohat2D(epsilon*(n-N-1),epsilon*(l-N-1))*.25*...
-            (randoms(N+1-n+1,1,1)*randoms(l-(N+1)+1,1,2)...
-            -1i*randoms(N+1-n+1,1,1)*randoms(l-(N+1)+1,2,2)...
-            +1i*randoms(N+1-n+1,2,1)*randoms(l-(N+1)+1,1,2)...
-            +randoms(N+1-n+1,2,1)*randoms(l-(N+1)+1,2,2));
-        %compute the 
-        %Fourier transform, but take re-indexing into account
-    end
-end
+
 source(N+1,N+1)=randoms(1,1,1)*randoms(1,1,2);
 lower=max(1,N+1-7); %compute the truncated upper and lower bounds for the 
 %sum outside the loop for efficiency's sake
