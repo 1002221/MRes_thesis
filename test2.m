@@ -1,5 +1,5 @@
 function a=test2(epsilon,J,m,T,N,randoms_init)
-%USAGE
+%USAGE 
 %J:= number of iterations
 %m:= we subdivide the unit interval into 2^m equally spaced points
 %T:= units of time
