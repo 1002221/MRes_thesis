@@ -4,11 +4,10 @@ function a=test2b(r,J,m,T,N,randoms_init)
 %m:= we subdivide the unit interval into 2^m equally spaced points
 %T:= units of time
 %N:= subscripts of the Fourier coefficients go from -N to N
-%epsilon:= parameter with which we smooth the white noise
-%randoms:= random variables supplied to the function: should be at least
-%(N+1) times 1 in size
-
-x=linspace(0,2*pi,2^10);
+%epsilon:= parameter with which we smooth the white noise (=1/r)
+%randoms_init:= random variables supplied to the function: for example,
+%randn(2^10,30,4)
+x=linspace(0,2*pi,2^2); %set up space domain
 u = zeros(2^m*T+1,2*N+1,J); %this will contain the Fourier coefficients. 
 %The first argument is the position in time, the second is the (reindexed) 
 %index of the Fourier coefficient, and the last is the iteration number.
@@ -21,22 +20,28 @@ for n=N+2:2*N+1
      for i=1:2^m*T+1
         x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,1));
         x2=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,2));
-        source(n,i)=1/(2*pi)*(x1-1i*x2); 
+        %terms where n>0
+        source(n,i)=1/(2*pi)*(x1-1i*x2);
+        %terms where n<0
         source(2*(N+1)-n,i)=1/(2*pi)*(x1+1i*x2);
      end
 end
- for i=1:2^m*T+1
-        x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,N+1,1));
-        source(N+1,i)=1/(2*pi)*(x1); 
- end
-source;
+%take care of the term where n=0
+for i=1:2^m*T+1
+    x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,N+1,1));
+    source(N+1,i)=1/(2*pi)*(x1); 
+end
 %compute the truncated upper and lower bounds for the 
 %sum outside the loop for efficiency's sake. There doesn't seem to be any
 %increase in accuracy with taking more than 7 fourier coefficients
-lower=max(1,N+1-7); 
-upper=min(2*N+1,N+1+7);
+cutoff=10;
+lower=max(1,N+1-cutoff); 
+upper=min(2*N+1,N+1+cutoff);
+%the next step will be used when finding triples of values that sum to a
+%particular value
 [d1, d2, d3] = ndgrid(lower:upper, lower:upper, lower:upper);
 soln=zeros(J,size(x,2));
+h = waitbar(0,'Please wait...');
 for j=2:J
     for k=1:2^m*T+1
         for n=1:2*N+1
@@ -59,21 +64,22 @@ for j=2:J
             %partition
         end    
     end
-%     comment out to find the solution at each iteration by summing over 
-%     the Fourier coefficients
-    for n=lower:upper
-        soln(j,:) = soln(j,:)+ u(2^m*T+1,n,j)*exp(1i*(n-N-1).*x);
-    end
+%     for n=lower:upper
+%         soln(j,:) = soln(j,:)+ u(2^m*T+1,n,j)*exp(1i*(n-N-1).*x);
+%     end
+    waitbar((j-1) / (J-1),h)
 end
+close(h)
+% *** comment out next part of the code to see how the approximation 
+% improves with each iteration ***
 % surf(x,linspace(2,J,J-1),real(soln(2:J,:)));
 % xlabel('space')
 % ylabel('iteration')
 % zlabel('solution')
-% for n=lower:upper
-%     soln(J,:) = soln(J,:)+ u(2^m*T+1,n,J)*exp(1i*(n-N-1).*x);
-% end
+for n=lower:upper
+    soln(J,:) = soln(J,:)+ u(2^m*T+1,n,J)*exp(1i*(n-N-1).*x);
+end
 a=soln(J,:);
-%7 iterations seem to be enough
 
 %NOTE: by setting 
 %source = zeros(2*N+1,1);
