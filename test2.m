@@ -9,6 +9,7 @@ function a=test2(epsilon,J,m,T,N,randoms_init)
 %(N+1) times 1 in size.
 
 x=linspace(0,2*pi,2^5);
+r=yomama;
 u = zeros(2^m*T+1,2*N+1,J); %this will contain the Fourier coefficients. 
 %The first argument is the position in time, the second is the (reindexed) 
 %index of the Fourier coefficient, and the last is the iteration number.
