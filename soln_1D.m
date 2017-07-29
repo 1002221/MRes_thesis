@@ -7,7 +7,7 @@ function a=soln_1D(r,J,m,T,N,randoms_init)
 %epsilon:= parameter with which we smooth the white noise (=1/r)
 %randoms_init:= random variables supplied to the function: for example,
 %randn(2^10,30,4)
-x=linspace(0,2*pi,2^2); %set up space domain
+x=linspace(0,2*pi,2^3); %set up space domain
 u = zeros(2^m*T+1,2*N+1,J); %this will contain the Fourier coefficients. 
 %The first argument is the position in time, the second is the (reindexed) 
 %index of the Fourier coefficient, and the last is the iteration number.
@@ -18,8 +18,8 @@ eps = 1; %parameter by which we multiply u^3. Allows us to get rid of the
 source = zeros(2*N+1,2^m+1);
 for n=N+2:2*N+1
      for i=1:2^m*T+1
-        x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,1));
-        x2=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,n,2));
+        x1=timewhitenoise(r,(i-1)/(2^m),randoms_init(:,n,1));
+        x2=timewhitenoise(r,(i-1)/(2^m),randoms_init(:,n,2));
         %terms where n>0
         source(n,i)=1/(2*pi)*(x1-1i*x2);
         %terms where n<0
@@ -28,7 +28,7 @@ for n=N+2:2*N+1
 end
 %take care of the term where n=0
 for i=1:2^m*T+1
-    x1=timewhitenoise1D(r,(i-1)/(2^m),randoms_init(:,N+1,1));
+    x1=timewhitenoise(r,(i-1)/(2^m),randoms_init(:,N+1,1));
     source(N+1,i)=1/(2*pi)*(x1); 
 end
 %compute the truncated upper and lower bounds for the 
@@ -64,23 +64,24 @@ for j=2:J
             %partition
         end    
     end
-%     for n=lower:upper
-%         soln(j,:) = soln(j,:)+ u(2^m*T+1,n,j)*exp(1i*(n-N-1).*x);
-%     end
+    for n=lower:upper
+        soln(j,:) = soln(j,:)+ u(2^m*T+1,n,j)*exp(1i*(n-N-1).*x);
+    end
     waitbar((j-1) / (J-1),h)
 end
 close(h)
 % *** comment out next part of the code to see how the approximation 
 % improves with each iteration ***
-% surf(x,linspace(2,J,J-1),real(soln(2:J,:)));
-% xlabel('space')
-% ylabel('iteration')
-% zlabel('solution')
+
+
 for n=lower:upper
     soln(J,:) = soln(J,:)+ u(2^m*T+1,n,J)*exp(1i*(n-N-1).*x);
 end
+surf(x,linspace(2,J,J-1),real(soln(2:J,:)));
 a=soln(J,:);
-
+xlabel('space')
+ylabel('iteration')
+zlabel('solution')
 %NOTE: by setting 
 %source = zeros(2*N+1,1);
 %source(N+1)=1; 
