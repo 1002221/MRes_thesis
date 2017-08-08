@@ -3,126 +3,47 @@ function a=soln_1D(r,J,m,T,N,randoms_init)
 %J:= number of iterations
 %m:= we subdivide the unit interval into 2^m equally spaced points
 %T:= units of time
-%N:= subscripts of the Fourier coefficients go from -N to N
+%N:= subscripts of the Fourier coefficients go from -N to N. Because of
+%Matlab's indexing rules, 1 corresponds to -N, and N+1 to 0.
 %epsilon:= parameter with which we smooth the white noise (=1/r)
 %randoms_init:= random variables supplied to the function: for example,
 %randn(2^10,30,4)
+
 x=linspace(0,2*pi,2^5); %set up space domain
+
 u = zeros(2^m*T+1,2*N+1,J); %this will contain the Fourier coefficients. 
-%The first argument is the position in time, the second is the (reindexed) 
-%index of the Fourier coefficient, and the last is the iteration number.
-%Entry N+1 corresponds to the zeroth Fourier coefficient.
-eps = 1; %parameter by which we multiply u^3. Allows us to get rid of the 
-%non-linear term if we wish, by setting it to 0
- 
-source = zeros(2*N+1,2^m+1);
-for n=N+2:2*N+1
-     for i=1:2^m*T+1
-        x1=timewhitenoise(r,(i-1)/(2^m),randoms_init(:,n,1));
-        x2=timewhitenoise(r,(i-1)/(2^m),randoms_init(:,n,2));
-        %terms where n>0
-        source(n,i)=1/(2*pi)*(x1-1i*x2);
-        %terms where n<0
-        source(2*(N+1)-n,i)=1/(2*pi)*(x1+1i*x2);
-     end
-end
-%take care of the term where n=0
-for i=1:2^m*T+1
-    x1=timewhitenoise(r,(i-1)/(2^m),randoms_init(:,N+1,1));
-    source(N+1,i)=1/(2*pi)*(x1); 
-end
-%compute the truncated upper and lower bounds for the 
-%sum outside the loop for efficiency's sake. There doesn't seem to be any
-%increase in accuracy with taking more than 7 fourier coefficients
+eps = 1; %set to 0 to take out non-linear term from code
+
+source=sourceterm(N,m,randoms_init,r,T);
+%compute the truncated upper and lower bounds for N in the sum
+
 cutoff=10;
 lower=max(1,N+1-cutoff); 
 upper=min(2*N+1,N+1+cutoff);
-%the next step will be used when finding triples of values that sum to a
-%particular value
-soln=zeros(J,size(x,2));
+
+soln=zeros(J,size(x,2)); %this will contain the solutions at each iteration
+
 [d1, d2, d3] = ndgrid(lower:upper, lower:upper, lower:upper);
-q=zeros(100,N+1);
-for n=N+1:2*N+1
-            %we want the sum of the indices of the u's at the previous
-            %iteration to equal the current index. This is what we ensure
-            %here
-            f=find(d1+d2+d3-(N+1)*3==n-(N+1));
-            q(1:length(f),n-N) = f;
-end
+q=sum_to_n(N,d1,d2,d3);%finding triples that sum to each n <= N
+
 h = waitbar(0,'Please wait...');
-for j=2:J
-    waitbar((j-1) / (J-1),h)
+for j=2:J %carry out the numerical scheme described in the project
+%     waitbar((j-1) / (J-1),h)
     for k=1:2^m*T+1
-        for n=N+2:2*N+1
-            %we want the sum of the indices of the u's at the previous
-            %iteration to equal the current index. This is what we ensure
-            %here
-%             q = find(d1+d2+d3-(N+1)*3==n-(N+1));
-            temp = 0;
-            tempn = 0;
-            w=q(:,n-N);
-            w=w(w~=0);
-            for i=1:k
-                temp1=0;
-                temp1n=0;
-                for o=1:length(w)
-                    temp1=temp1+sum(eps.*u(i,d1(w(o)),j-1)...
-                        .*u(i,d2(w(o)),j-1).*u(i,d3(w(o)),j-1));
-                    temp1n=temp1n+sum(eps.*u(i,2*(N+1)-d1(w(o)),j-1)...
-                        .*u(i,2*(N+1)-d2(w(o)),j-1)...
-                        .*u(i,2*(N+1)-d3(w(o)),j-1));
-                end
-                temp = temp+ exp((n-(N+1))^2*((i-1)-(k-1))/(2^m))*...
-                    (source(n,i)-temp1)
-                tempn = tempn+ exp((2*(N+1)-n-(N+1))^2*...
-                    ((i-1)-(k-1))/(2^m))*(source(2*(N+1)-n,i)-temp1n)
-            end        
-            u(k,n,j)=(1/(2^m))*temp; 
-            u(k,2*(N+1)-n,j)=(1/(2^m))*tempn; 
-            %approximate the integral by 
-            %dividing by the difference between successive points in the
-            %partition
-        end
-        for n=N+1:N+1
-            %we want the sum of the indices of the u's at the previous
-            %iteration to equal the current index. This is what we ensure
-            %here
-            w=q(:,n-N);
-            w=w(w~=0);
-            temp = 0;
-            for i=1:k
-                temp1=0;
-                for o=1:size(w)
-                    temp1=temp1+sum(eps.*u(i,d1(w(o)),j-1)...
-                        .*u(i,d2(w(o)),j-1).*u(i,d3(w(o)),j-1));
-                end
-                temp = temp+ exp((n-(N+1))^2*((i-1)-(k-1))/(2^m))*...
-                    (source(n,i)-temp1);
-            end        
-            u(k,n,j)=(1/(2^m))*temp;  
-            %approximate the integral by 
-            %dividing by the difference between successive points in the
-            %partition
-        end    
+        u=approx_soln(u,q,j,d1,d2,d3,eps,m,N,k,source);
+        waitbar(((j-1-1)*(2^m*T+1)+k) / ((J-1)*(2^m*T+1)),h)
     end
-    for n=lower:upper
-        soln(j,:) = soln(j,:)+ u(2^m*T+1,n,j)*exp(1i*(n-N-1).*x);
-    end
-    
+    soln(j,:)=sumfourier(N,lower,upper,x,u(2^m*T+1,:,j));
 end
 close(h)
-% *** comment out next part of the code to see how the approximation 
-% improves with each iteration ***
- 
- 
-% for n=lower:upper
-%     soln(J,:) = soln(J,:)+ u(2^m*T+1,n,J)*exp(1i*(n-N-1).*x);
-% end
-surf(x,linspace(2,J,J-1),real(soln(2:J,:)));
-a=soln(J,:);
+
+surf(x,linspace(2,J,J-1),real(soln(2:J,:)));%plot soln at each iteration
 xlabel('space')
 ylabel('iteration')
 zlabel('solution')
+
+a=soln(J,:);%return solution at last iteration
+
 %NOTE: by setting 
 %source = zeros(2*N+1,1);
 %source(N+1)=1; 
